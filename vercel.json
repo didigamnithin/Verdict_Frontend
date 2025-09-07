@@ -20,6 +20,6 @@
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "https://your-render-app.onrender.com"
+    "REACT_APP_API_URL": "https://your-digitalocean-app.ondigitalocean.app"
   }
 }
