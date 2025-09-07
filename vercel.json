@@ -20,6 +20,6 @@
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "https://your-digitalocean-app.ondigitalocean.app"
+    "REACT_APP_API_URL": "http://your-aws-ec2-ip:80"
   }
 }
