@@ -5,6 +5,7 @@ function ChatInterface({ chat, onUpdateChat, user }) {
   const [inputText, setInputText] = useState('');
   const [attachedFile, setAttachedFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showDocumentOptions, setShowDocumentOptions] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -25,6 +26,7 @@ function ChatInterface({ chat, onUpdateChat, user }) {
       
       if (allowedTypes.includes(file.type) || allowedExtensions.includes(fileExtension)) {
         setAttachedFile(file);
+        setShowDocumentOptions(true);
       } else {
         alert('Please select a .txt, .pdf, or .docx file');
       }
@@ -33,6 +35,7 @@ function ChatInterface({ chat, onUpdateChat, user }) {
 
   const removeFile = () => {
     setAttachedFile(null);
+    setShowDocumentOptions(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -72,6 +75,7 @@ function ChatInterface({ chat, onUpdateChat, user }) {
 
     setInputText('');
     setAttachedFile(null);
+    setShowDocumentOptions(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -134,6 +138,84 @@ function ChatInterface({ chat, onUpdateChat, user }) {
     }
   };
 
+  const handleDocumentAction = async (action) => {
+    if (!attachedFile) return;
+
+    const userMessage = {
+      id: Date.now(),
+      type: 'user',
+      content: `${action} document: ${attachedFile.name}`,
+      file: attachedFile,
+      timestamp: new Date().toISOString()
+    };
+
+    // Add user message to chat
+    const updatedMessages = [...(chat.messages || []), userMessage];
+    onUpdateChat(chat.id, { 
+      messages: updatedMessages,
+      title: chat.title === 'New Chat' ? `${action} ${attachedFile.name}`.substring(0, 30) + '...' : chat.title
+    });
+
+    setIsLoading(true);
+    setShowDocumentOptions(false);
+
+    try {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const formData = new FormData();
+      formData.append('file', attachedFile);
+      
+      let endpoint;
+      if (action === 'Summarize') {
+        endpoint = '/api/summarize_document';
+        formData.append('question', 'Summarize this document');
+      } else {
+        endpoint = '/api/analyze_document';
+      }
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      const aiMessage = {
+        id: Date.now() + 1,
+        type: 'ai',
+        content: data,
+        action: action,
+        timestamp: new Date().toISOString()
+      };
+
+      onUpdateChat(chat.id, { 
+        messages: [...updatedMessages, aiMessage]
+      });
+
+    } catch (error) {
+      console.error(`Error ${action.toLowerCase()}ing:`, error);
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: 'ai',
+        content: { error: `${action} failed: ${error.message}` },
+        timestamp: new Date().toISOString()
+      };
+      
+      onUpdateChat(chat.id, { 
+        messages: [...updatedMessages, errorMessage]
+      });
+    } finally {
+      setIsLoading(false);
+      setAttachedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -166,6 +248,13 @@ function ChatInterface({ chat, onUpdateChat, user }) {
             {message.content.error ? (
               <div className="error-message">
                 <p>❌ {message.content.error}</p>
+              </div>
+            ) : message.action === 'Summarize' ? (
+              <div className="summary-result">
+                <h3>📄 Document Summary</h3>
+                <div className="summary-content">
+                  <p>{message.content.summary}</p>
+                </div>
               </div>
             ) : (
               <div className="analysis-result">
@@ -258,6 +347,28 @@ function ChatInterface({ chat, onUpdateChat, user }) {
             <button onClick={removeFile} className="remove-file">
               <X size={14} />
             </button>
+          </div>
+        )}
+
+        {showDocumentOptions && attachedFile && (
+          <div className="document-options">
+            <h4>What would you like to do with this document?</h4>
+            <div className="option-buttons">
+              <button 
+                className="option-button summarize-btn"
+                onClick={() => handleDocumentAction('Summarize')}
+                disabled={isLoading}
+              >
+                📄 Summarize
+              </button>
+              <button 
+                className="option-button analyze-btn"
+                onClick={() => handleDocumentAction('Analyze Sentiment')}
+                disabled={isLoading}
+              >
+                🎯 Analyze Sentiment
+              </button>
+            </div>
           </div>
         )}
         
