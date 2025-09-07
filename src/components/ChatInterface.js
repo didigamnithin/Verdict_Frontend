@@ -85,7 +85,9 @@ function ChatInterface({ chat, onUpdateChat, user }) {
     try {
       let response;
       
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://54.210.153.76:8080';
+      console.log('API_BASE_URL:', API_BASE_URL);
+      console.log('REACT_APP_API_URL env var:', process.env.REACT_APP_API_URL)
       
       if (attachedFile) {
         // Send file for analysis
@@ -160,7 +162,8 @@ function ChatInterface({ chat, onUpdateChat, user }) {
     setShowDocumentOptions(false);
 
     try {
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://54.210.153.76:8080';
+      console.log('Document Action API_BASE_URL:', API_BASE_URL);
       const formData = new FormData();
       formData.append('file', attachedFile);
       
