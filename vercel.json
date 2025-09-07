@@ -20,6 +20,6 @@
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "http://your-aws-ec2-ip:80"
+    "REACT_APP_API_URL": "http://54.210.153.76:8080"
   }
 }
