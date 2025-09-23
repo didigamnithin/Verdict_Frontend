@@ -90,6 +90,8 @@ function ChatInterface({ chat, onUpdateChat, user }) {
       console.log('🔗 API_BASE_URL:', API_BASE_URL);
       console.log('🌍 Environment:', process.env.NODE_ENV);
       console.log('✅ Using AWS EC2 Backend:', API_BASE_URL);
+      console.log('🚀 VERSION: 2.0 - AWS EC2 DEPLOYMENT');
+      console.log('❌ OLD RAILWAY URL REMOVED - USING AWS ONLY');
       
       if (attachedFile) {
         // Send file for analysis
