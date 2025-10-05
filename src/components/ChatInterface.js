@@ -1,13 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, FileText, Image, X } from 'lucide-react';
 
-function ChatInterface({ chat, onUpdateChat, user }) {
+function ChatInterface({ chat, onUpdateChat, user, geminiApiKey, setGeminiApiKey }) {
   const [inputText, setInputText] = useState('');
   const [attachedFile, setAttachedFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showDocumentOptions, setShowDocumentOptions] = useState(false);
+  const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
+  const [tempApiKey, setTempApiKey] = useState('');
+  const [typingText, setTypingText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [currentTypingMessageId, setCurrentTypingMessageId] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const typingIntervalRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -15,7 +21,49 @@ function ChatInterface({ chat, onUpdateChat, user }) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [chat.messages]);
+  }, [chat.messages, typingText]);
+
+  // Typing effect
+  useEffect(() => {
+    if (isTyping && currentTypingMessageId) {
+      const message = chat.messages?.find(m => m.id === currentTypingMessageId);
+      if (message && message.content) {
+        let fullText = '';
+        
+        // Get the text to type
+        if (message.action === 'Summarize') {
+          fullText = message.content.summary || '';
+        } else if (message.content.error) {
+          fullText = message.content.error;
+        } else {
+          // For sentiment analysis, skip typing effect
+          setIsTyping(false);
+          setCurrentTypingMessageId(null);
+          return;
+        }
+
+        let currentIndex = 0;
+        setTypingText('');
+
+        typingIntervalRef.current = setInterval(() => {
+          if (currentIndex < fullText.length) {
+            setTypingText(fullText.substring(0, currentIndex + 1));
+            currentIndex++;
+          } else {
+            clearInterval(typingIntervalRef.current);
+            setIsTyping(false);
+            setCurrentTypingMessageId(null);
+          }
+        }, 10); // Adjust speed: lower = faster
+
+        return () => {
+          if (typingIntervalRef.current) {
+            clearInterval(typingIntervalRef.current);
+          }
+        };
+      }
+    }
+  }, [isTyping, currentTypingMessageId, chat.messages]);
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
@@ -86,7 +134,7 @@ function ChatInterface({ chat, onUpdateChat, user }) {
       let response;
       
       // Force AWS EC2 URL - remove all old platform references
-      const API_BASE_URL = 'http://54.210.153.76:8080';
+      const API_BASE_URL = 'http://localhost:8080';
       console.log('🔗 API_BASE_URL:', API_BASE_URL);
       console.log('🌍 Environment:', process.env.NODE_ENV);
       console.log('✅ Using AWS EC2 Backend:', API_BASE_URL);
@@ -116,13 +164,16 @@ function ChatInterface({ chat, onUpdateChat, user }) {
 
       const data = await response.json();
       
+      // Create AI message with typing effect
       const aiMessage = {
         id: Date.now() + 1,
         type: 'ai',
         content: data,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        isTyping: true
       };
 
+      // Add message and start typing effect
       onUpdateChat(chat.id, { 
         messages: [...updatedMessages, aiMessage]
       });
@@ -167,7 +218,7 @@ function ChatInterface({ chat, onUpdateChat, user }) {
 
     try {
       // Force AWS EC2 URL - remove all old platform references
-      const API_BASE_URL = 'http://54.210.153.76:8080';
+      const API_BASE_URL = 'http://localhost:8080';
       console.log('📄 Document Action API_BASE_URL:', API_BASE_URL);
       const formData = new FormData();
       formData.append('file', attachedFile);
@@ -176,6 +227,7 @@ function ChatInterface({ chat, onUpdateChat, user }) {
       if (action === 'Summarize') {
         endpoint = '/api/summarize_document';
         formData.append('question', 'Summarize this document');
+        // API key is now handled by backend from .env
       } else {
         endpoint = '/api/analyze_document';
       }
@@ -202,6 +254,12 @@ function ChatInterface({ chat, onUpdateChat, user }) {
       onUpdateChat(chat.id, { 
         messages: [...updatedMessages, aiMessage]
       });
+
+      // Start typing effect for summary
+      if (action === 'Summarize') {
+        setIsTyping(true);
+        setCurrentTypingMessageId(aiMessage.id);
+      }
 
     } catch (error) {
       console.error(`Error ${action.toLowerCase()}ing:`, error);
@@ -231,6 +289,54 @@ function ChatInterface({ chat, onUpdateChat, user }) {
     }
   };
 
+  // Format summary text with markdown-like formatting
+  const formatSummary = (text) => {
+    if (!text) return '';
+    
+    // Function to convert **text** to <strong>text</strong>
+    const parseBold = (line) => {
+      const parts = [];
+      let lastIndex = 0;
+      const regex = /\*\*(.*?)\*\*/g;
+      let match;
+      
+      while ((match = regex.exec(line)) !== null) {
+        // Add text before the match
+        if (match.index > lastIndex) {
+          parts.push(line.substring(lastIndex, match.index));
+        }
+        // Add bold text
+        parts.push(<strong key={match.index}>{match[1]}</strong>);
+        lastIndex = match.index + match[0].length;
+      }
+      
+      // Add remaining text
+      if (lastIndex < line.length) {
+        parts.push(line.substring(lastIndex));
+      }
+      
+      return parts.length > 0 ? parts : line;
+    };
+    
+    // Split into lines and format
+    const lines = text.split('\n');
+    return lines.map((line, index) => {
+      // Headers (lines ending with :)
+      if (line.trim().endsWith(':') && line.trim().length > 0) {
+        return <h4 key={index} className="summary-header">{parseBold(line.trim())}</h4>;
+      }
+      // Bullet points
+      else if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
+        return <li key={index} className="summary-bullet">{parseBold(line.trim().substring(1).trim())}</li>;
+      }
+      // Regular paragraphs
+      else if (line.trim().length > 0) {
+        return <p key={index} className="summary-paragraph">{parseBold(line.trim())}</p>;
+      }
+      return null;
+    }).filter(Boolean);
+  };
+
   const renderMessage = (message) => {
     if (message.type === 'user') {
       return (
@@ -252,6 +358,9 @@ function ChatInterface({ chat, onUpdateChat, user }) {
     } else {
       return (
         <div key={message.id} className="message ai-message">
+          <div className="ai-avatar">
+            <span>AI</span>
+          </div>
           <div className="message-content">
             {message.content.error ? (
               <div className="error-message">
@@ -259,9 +368,16 @@ function ChatInterface({ chat, onUpdateChat, user }) {
               </div>
             ) : message.action === 'Summarize' ? (
               <div className="summary-result">
-                <h3>📄 Document Summary</h3>
+                <h3 className="summary-title">📄 Document Summary</h3>
                 <div className="summary-content">
-                  <p>{message.content.summary}</p>
+                  {isTyping && currentTypingMessageId === message.id ? (
+                    <>
+                      {formatSummary(typingText)}
+                      <span className="typing-cursor">▋</span>
+                    </>
+                  ) : (
+                    formatSummary(message.content.summary)
+                  )}
                 </div>
               </div>
             ) : (
@@ -332,6 +448,9 @@ function ChatInterface({ chat, onUpdateChat, user }) {
             {chat.messages?.map(renderMessage)}
             {isLoading && (
               <div className="message ai-message loading">
+                <div className="ai-avatar">
+                  <span>AI</span>
+                </div>
                 <div className="message-content">
                   <div className="typing-indicator">
                     <span></span>

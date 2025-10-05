@@ -10,18 +10,32 @@ function App() {
   const [user, setUser] = useState(null);
   const [chats, setChats] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
+  const [geminiApiKey, setGeminiApiKey] = useState('');
 
   useEffect(() => {
     // Load saved chats from localStorage
-    const savedChats = localStorage.getItem('verdict-chats');
+    const savedChats = localStorage.getItem('evidenceai-chats');
     if (savedChats) {
       setChats(JSON.parse(savedChats));
+    }
+    
+    // Load saved OpenAI API key from localStorage
+    const savedApiKey = localStorage.getItem('evidenceai-openai-key');
+    if (savedApiKey) {
+      setGeminiApiKey(savedApiKey);
     }
   }, []);
 
   useEffect(() => {
+    // Save OpenAI API key to localStorage whenever it changes
+    if (geminiApiKey) {
+      localStorage.setItem('evidenceai-openai-key', geminiApiKey);
+    }
+  }, [geminiApiKey]);
+
+  useEffect(() => {
     // Save chats to localStorage whenever chats change
-    localStorage.setItem('verdict-chats', JSON.stringify(chats));
+    localStorage.setItem('evidenceai-chats', JSON.stringify(chats));
   }, [chats]);
 
   const createNewChat = () => {
@@ -55,7 +69,7 @@ function App() {
     <div className="app">
       <div className="app-header">
         <div className="header-left">
-          <h1>Verdict AI</h1>
+          <h1>EvidenceAI</h1>
         </div>
         <div className="header-right">
           <GoogleAuth user={user} setUser={setUser} />
@@ -77,10 +91,12 @@ function App() {
               chat={currentChat}
               onUpdateChat={updateChat}
               user={user}
+              geminiApiKey={geminiApiKey}
+              setGeminiApiKey={setGeminiApiKey}
             />
           ) : (
             <div className="welcome-screen">
-              <h2>Welcome to Verdict AI</h2>
+              <h2>Welcome to EvidenceAI</h2>
               <p>Your intelligent companion for understanding sentiment in text and documents.</p>
               <button onClick={createNewChat} className="new-chat-btn">
                 Start New Chat

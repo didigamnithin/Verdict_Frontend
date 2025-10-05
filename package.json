@@ -1,7 +1,7 @@
 {
-  "name": "verdict-ai",
+  "name": "evidenceai",
   "version": "1.0.0",
-  "description": "VerdictAI sentiment analysis frontend",
+  "description": "EvidenceAI sentiment analysis frontend",
   "main": "src/index.js",
   "scripts": {
     "start": "react-scripts start",

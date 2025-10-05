@@ -69,7 +69,7 @@ function Sidebar({ chats, currentChatId, onChatSelect, onNewChat, onDeleteChat }
       <div className="sidebar-footer">
         <div className="user-info">
           <User size={16} />
-          <span>Verdict AI</span>
+          <span>EvidenceAI</span>
         </div>
       </div>
     </div>
