@@ -134,7 +134,7 @@ function ChatInterface({ chat, onUpdateChat, user, geminiApiKey, setGeminiApiKey
       let response;
       
       // Force AWS EC2 URL - remove all old platform references
-      const API_BASE_URL = 'http://localhost:8080';
+      const API_BASE_URL = 'https://postpituitary-patria-pettishly.ngrok-free.dev';
       console.log('🔗 API_BASE_URL:', API_BASE_URL);
       console.log('🌍 Environment:', process.env.NODE_ENV);
       console.log('✅ Using AWS EC2 Backend:', API_BASE_URL);
@@ -218,7 +218,7 @@ function ChatInterface({ chat, onUpdateChat, user, geminiApiKey, setGeminiApiKey
 
     try {
       // Force AWS EC2 URL - remove all old platform references
-      const API_BASE_URL = 'http://localhost:8080';
+      const API_BASE_URL = 'https://postpituitary-patria-pettishly.ngrok-free.dev';
       console.log('📄 Document Action API_BASE_URL:', API_BASE_URL);
       const formData = new FormData();
       formData.append('file', attachedFile);
