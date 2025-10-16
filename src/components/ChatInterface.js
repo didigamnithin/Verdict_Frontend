@@ -218,7 +218,7 @@ function ChatInterface({ chat, onUpdateChat, user, geminiApiKey, setGeminiApiKey
 
     try {
       // Force AWS EC2 URL - remove all old platform references
-      // new url updated to ngrok free dev
+      // new url updated to ngrok free dev.
       const API_BASE_URL = 'https://postpituitary-patria-pettishly.ngrok-free.dev';
       console.log('📄 Document Action API_BASE_URL:', API_BASE_URL);
       const formData = new FormData();
